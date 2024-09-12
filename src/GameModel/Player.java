@@ -1,36 +1,58 @@
 package GameModel;
 /*
-Code created by Josh Braza 
+Code created by Josh Braza
 */
-import java.util.LinkedList;
 
+import View.PlayerIcon;
 import View.UNOCard;
+
+import java.util.LinkedList;
 
 public class Player {
 	
 	private String name = null;
+	private PlayerIcon playerIcon = null;
 	private boolean isMyTurn = false;
 	private boolean saidUNO = false;
-	private LinkedList<UNOCard> myCards;
+	private final LinkedList<UNOCard> myCards;
+	private boolean isPC = false;
+
 	
 	private int playedCards = 0;
 	
 	public Player(){
-		myCards = new LinkedList<UNOCard>();
+		myCards = new LinkedList<>();
 	}
 	
 	public Player(String player){
 		setName(player);
-		myCards = new LinkedList<UNOCard>();
+		myCards = new LinkedList<>();
 	}
 	
-	public void setName(String newName){
+	public final void setName(String newName){
 		name = newName;
 	}
 	
 	public String getName(){
 		return this.name;
 	}
+
+	public final void setPlayerIcon(PlayerIcon playerIcon){
+		this.playerIcon = playerIcon;
+	}
+
+	public PlayerIcon getPlayerIcon(){
+		return this.playerIcon;
+	}
+
+	public void setPC(boolean isPC){
+		this.isPC = isPC;
+	}
+
+	public boolean isPC(){
+		return isPC;
+	}
+	
 	public void obtainCard(UNOCard card){
 		card.setShowValue(isMyTurn);
 		myCards.add(card);
@@ -45,7 +67,7 @@ public class Player {
 	}
 	
 	public boolean hasCard(UNOCard thisCard){
-		return myCards.contains(thisCard);		
+		return myCards.contains(thisCard);
 	}
 	
 	public void removeCard(UNOCard thisCard){
@@ -69,7 +91,7 @@ public class Player {
 	}
 	
 	public boolean hasCards(){
-		return (myCards.isEmpty()) ? false : true;
+		return !myCards.isEmpty();
 	}
 	
 	public boolean getSaidUNO(){
@@ -85,6 +107,10 @@ public class Player {
 	}
 	
 	public void setCards(){
-		myCards = new LinkedList<UNOCard>();
+		myCards.clear();
+	}
+
+	public LinkedList<UNOCard> getCards() {
+		return myCards;
 	}
 }

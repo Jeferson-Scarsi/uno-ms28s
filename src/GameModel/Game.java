@@ -3,170 +3,116 @@ package GameModel;
 Code created by Josh Braza
 */
 
-import java.io.FileNotFoundException;
-import java.util.Stack;
-
-import javax.swing.JOptionPane;
-
 import CardModel.*;
+import GameModel.Managers.AudioManager;
+import GameModel.Managers.CardManager;
 import Interfaces.GameConstants;
+import View.PlayerIcon;
 import View.UNOCard;
-import javax.sound.sampled.*;
-import java.io.File;
-import java.io.IOException;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Random;
 
 //import static Interfaces.UNOConstants.WILD;
 
 public class Game implements GameConstants {
 
-	private Player[] players;
+	private final  Player[] players;
 	private boolean isOver;
-	private int GAMEMODE;
+	private final int GAMEMODE;
 
 	private PC pc;
-	private Dealer dealer;
-	private Stack<UNOCard> cardStack;
-
-	private Clip backgroundMusicClip;
+	
+	private final CardManager cardManager;
+	private final AudioManager audioManager;
 
 	public Game(int mode){
 
 		GAMEMODE = mode;
+		audioManager = AudioManager.getInstance();
+
 		//Create players
-		String name = (GAMEMODE==MANUAL) ? JOptionPane.showInputDialog("Player 1") : "PC";
-		String name2 = JOptionPane.showInputDialog("Player 2");
+		String nomeJogadorUm = (GAMEMODE==MANUAL) ? JOptionPane.showInputDialog(null, "Escolha um nome para o Jogador 1:",
+				"Nome do Jogador", JOptionPane.PLAIN_MESSAGE) : "PC";
+		nomeJogadorUm = nomeJogadorUm == null || nomeJogadorUm.isEmpty() ? "Jogador 1" : nomeJogadorUm;
 
-//		ColorSelectionWindow colorSelection = new ColorSelectionWindow();
-//		String selectedPalette = colorSelection.getSelectedPalette();
+		PlayerIcon playerIconUm;
+		if (GAMEMODE == vsPC) {
+			playerIconUm = playerIconOptionList[new Random().nextInt(playerIconOptionList.length)];
+		} else {
+			playerIconUm = showIconSelectionDialog(nomeJogadorUm);
+		}
 
-		if(GAMEMODE==vsPC)
+		String nomeJogadorDois = JOptionPane.showInputDialog(null, "Escolha um nome para o Jogador 2:",
+				"Nome do Jogador", JOptionPane.PLAIN_MESSAGE);
+		nomeJogadorDois = nomeJogadorDois == null || nomeJogadorDois.isEmpty() ? "Jogador 2" : nomeJogadorDois;
+
+		PlayerIcon playerIconDois = showIconSelectionDialog(nomeJogadorDois);
+
+		if (GAMEMODE == vsPC) {
 			pc = new PC();
+			System.out.println("Game mode é vs PC.");
+		} else {
+			System.out.println("Game mode é Player vs Player.");
+		}
 
-		Player player1 = (GAMEMODE==vsPC) ? pc : new Player(name);
-		Player player2 = new Player(name2);
+		Player player1 = (GAMEMODE==vsPC) ? pc : new Player(nomeJogadorUm);
+		Player player2 = new Player(nomeJogadorDois);
 
-		playBackgroundMusic("src/Sounds/Run-Amok_chosic.com_.wav");
+		player1.setPlayerIcon(playerIconUm);
+		player2.setPlayerIcon(playerIconDois);
+
+		audioManager.controlBackgroundMusic();
 
 		player2.toggleTurn();				//Initially, player2's turn
 
 		players = new Player[]{player1, player2};
 
-		//Create Dealer
-		dealer = new Dealer();
-		cardStack = dealer.shuffle();
-		dealer.spreadOut(players);
+		cardManager = new CardManager(players);
 
 		isOver = false;
 	}
 
-	private void playBackgroundMusic(String audioFilePath) { //som de fundo
-		try {
-			File audioFile = new File(audioFilePath);
-			if (!audioFile.exists()) {
-				throw new FileNotFoundException("O arquivo de áudio não foi encontrado: " + audioFilePath);
-			}
+	private PlayerIcon showIconSelectionDialog(String playerName) {
+		JPanel iconPanel = new JPanel(new GridLayout(1, playerIconOptionList.length, 10, 10));
+		final PlayerIcon[] selected = {playerIconOptionList[new Random().nextInt(playerIconOptionList.length)]};
 
-			AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
-
-			Clip clip = AudioSystem.getClip();
-			clip.open(audioInputStream);
-
-			FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-			gainControl.setValue(-10.0f);
-
-			clip.loop(Clip.LOOP_CONTINUOUSLY);
-
-			clip.start();
-
-			backgroundMusicClip = clip;
-			backgroundMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-			backgroundMusicClip.start();
-		} catch (FileNotFoundException e) {
-			// Arquivo não encontrado
-			e.printStackTrace();
-		} catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
-			// Outras exceções
-			e.printStackTrace();
+		for (PlayerIcon icon : playerIconOptionList) {
+			JButton button = new JButton(icon);
+			button.setPreferredSize(new Dimension(50, 30));
+			button.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					selected[0] = icon;
+					JOptionPane.getRootFrame().dispose();
+				}
+			});
+			iconPanel.add(button);
 		}
-	}
 
-	private void stopBackgroundMusic() {
-		if (backgroundMusicClip != null && backgroundMusicClip.isRunning()) {
-			backgroundMusicClip.stop();
-			backgroundMusicClip.close();
-		}
+		JOptionPane.showOptionDialog(
+				null,
+				iconPanel,
+				"Escolha um ícone para " + playerName,
+				JOptionPane.DEFAULT_OPTION,
+				JOptionPane.PLAIN_MESSAGE,
+				null,
+				new Object[]{},
+				null
+		);
+
+		return selected[0]; // Retorna o ícone selecionado ou valor aleatório se o dialog for fechado
 	}
 
 	private void playAudio(String audioFilePath) { //pescar carta
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					File audioFile = new File(audioFilePath);
-					if (!audioFile.exists()) {
-						throw new FileNotFoundException("O arquivo de áudio não foi encontrado: " + audioFilePath);
-					}
-
-					AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
-
-					Clip clip = AudioSystem.getClip();
-					clip.open(audioInputStream);
-
-					clip.start();
-
-					clip.addLineListener(new LineListener() {
-						@Override
-						public void update(LineEvent event) {
-							if (event.getType() == LineEvent.Type.STOP) {
-								clip.close();
-							}
-						}
-					});
-				} catch (FileNotFoundException e) {
-					// Lide com o erro de arquivo não encontrado
-					e.printStackTrace();
-				} catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
-					// Lide com outras exceções
-					e.printStackTrace();
-				}
-			}
-		}).start();
+		audioManager.playSoundEffect(audioFilePath);
 	}
 
 	private void playCardSound() { //jogar carta
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					File audioFile = new File("src/Sounds/depositphotos_414403158-track-short-recording-footstep-dry-grass.wav");
-					if (!audioFile.exists()) {
-						throw new FileNotFoundException("O arquivo de áudio não foi encontrado: " + audioFile.getPath());
-					}
-
-					AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
-
-					Clip clip = AudioSystem.getClip();
-					clip.open(audioInputStream);
-
-					clip.start();
-
-					clip.addLineListener(new LineListener() {
-						@Override
-						public void update(LineEvent event) {
-							if (event.getType() == LineEvent.Type.STOP) {
-								clip.close();
-							}
-						}
-					});
-				} catch (FileNotFoundException e) {
-					// Lide com o erro de arquivo não encontrado
-					e.printStackTrace();
-				} catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
-					// Lide com outras exceções
-					e.printStackTrace();
-				}
-			}
-		}).start();
+		playAudio("src/Sounds/depositphotos_414403158-track-short-recording-footstep-dry-grass.wav");
 	}
 
 	public Player[] getPlayers() {
@@ -174,64 +120,124 @@ public class Game implements GameConstants {
 	}
 
 	public UNOCard getCard() {
-		return dealer.getCard();
+		return cardManager.drawCard();
 	}
 
+	//Modularização na implementação caso o jogador não diga uno quando estiver com 2 cartas
 	public void removePlayedCard(UNOCard playedCard) {
-
-		for (Player p : players) {
-			if (p.hasCard(playedCard)){
-				p.removeCard(playedCard);
-				playCardSound();
-
-				if (p.getTotalCards() == 1 && !p.getSaidUNO()) {
-					sayUNO(p);
-				}else if(p.getTotalCards()>2){
-					p.setSaidUNOFalse();
-				}
+		cardManager.removePlayedCard(playedCard);
+		playCardSound();
+		for(Player player : players){
+			if(player.isMyTurn()){
+				handleUNOState(player);
+				break;
 			}
 		}
 	}
+	
+	private void handleUNOState(Player player) {
+		if (player.getTotalCards() == 1 && !player.getSaidUNO()) {
+			applyUNOConsequences(player);
+		} else if (player.getTotalCards() > 2) {
+			player.setSaidUNOFalse();
+		}
+	}
+	
+	private void applyUNOConsequences(Player player) {
+		infoPanel.setError(player.getName() + " esqueceu de dizer UNO!");
+		player.obtainCard(getCard());
+		player.obtainCard(getCard());
+	}
+	
 
-	private void sayUNO(Player p) {
-		infoPanel.setError(p.getName() + " Forgot to say UNO");
-		p.obtainCard(getCard());
-		p.obtainCard(getCard());
+	private void sayUNO(Player player) {
+		System.out.println(player.getName() + "Jogador esqueceu de dizer uno");
+		infoPanel.setError(player.getName() + " Esqueceu de dizer UNO!");
+		player.obtainCard(getCard());
+		player.obtainCard(getCard());
 	}
 
 	//give player a card
 	public void drawCard(UNOCard topCard) {
-
+		System.out.println("Comprando carta para o jogador atual.");
 		boolean canPlay = false;
 
 		for (Player p : players) {
 			if (p.isMyTurn()) {
 				UNOCard newCard = getCard();
 				p.obtainCard(newCard);
-				canPlay = canPlay(topCard, newCard);
+				System.out.println("Carta comprada: " + newCard.toString());
 
-				if(pc.isMyTurn() && canPlay){
-					playPC(topCard);
-					canPlay = true;
+				canPlay = canPlay(topCard, newCard);
+				infoPanel.repaint();
+
+				if (pc != null && pc.isMyTurn()) {
+					if (canPlay) {
+						playPC(topCard);
+					} else {
+						switchTurn();
+					}
 				}
+				break;
 			}
 		}
 
 		playAudio("src/Sounds/depositphotos_431797418-track-heavily-pushing-releasing-spacebar-keyboard.wav");
 
-		if (!canPlay)
+		if (!canPlay && GAMEMODE != vsPC) {
 			switchTurn();
+		}
 	}
 
 	public void switchTurn() {
+		System.out.println("Trocando o turno");
 		for (Player p : players) {
 			p.toggleTurn();
 		}
+
+		if (GAMEMODE != vsPC) {
+			setCardsVisibility(false);
+
+			confirmNextPlayerTurn();
+
+			setCardsVisibilityForCurrentPlayer(true);
+		}
+
 		whoseTurn();
 	}
 
-	//Draw cards x times
+	private void confirmNextPlayerTurn() {
+		infoPanel.repaint();
+
+		String message = "Confirme que o próximo jogador está pronto para jogar.";
+		int option = JOptionPane.showConfirmDialog(null, message, "Confirmação de Turno", JOptionPane.OK_CANCEL_OPTION);
+
+		if (option != JOptionPane.OK_OPTION) {
+			JOptionPane.showMessageDialog(null, "O turno não foi confirmado. Por favor, confirme para continuar.");
+			confirmNextPlayerTurn();
+		}
+	}
+
+	private void setCardsVisibility(boolean visible) {
+		for (Player player : this.getPlayers()) {
+			for (UNOCard card : player.getCards()) {
+				card.setShowValue(visible);
+			}
+		}
+	}
+
+	private void setCardsVisibilityForCurrentPlayer(boolean visible) {
+		for (Player player : this.getPlayers()) {
+			if (player.isMyTurn()) {
+				for (UNOCard card : player.getCards()) {
+					card.setShowValue(visible);
+				}
+			}
+		}
+	}
+
 	public void drawPlus(int times) {
+		System.out.println("Comprando " + times + " cartas como penalidade.");
 		for (Player p : players) {
 			if (!p.isMyTurn()) {
 				for (int i = 1; i <= times; i++)
@@ -241,12 +247,16 @@ public class Game implements GameConstants {
 	}
 
 	//response whose turn it is
+	public void drawwPlus(int times){
+		cardManager.drawPlus(times);
+	}
+
 	public void whoseTurn() {
 
 		for (Player p : players) {
 			if (p.isMyTurn()){
-				infoPanel.updateText(p.getName() + "'s Turn");
-				System.out.println(p.getName() + "'s Turn");
+				infoPanel.updateText("Vez de " + p.getName());
+				System.out.println("Vez de " + p.getName());
 			}
 		}
 		infoPanel.setDetail(playedCardsSize(), remainingCards());
@@ -256,16 +266,16 @@ public class Game implements GameConstants {
 	//return if the game is over
 	public boolean isOver() {
 
-		if(cardStack.isEmpty()){
+		if(cardManager.remainingCards() == 0){
 			isOver= true;
-			stopBackgroundMusic();//parar de tocar a musica de fundo
+			audioManager.stopBackgroundMusic();//parar de tocar a musica de fundo
 			return isOver;
 		}
 
 		for (Player p : players) {
 			if (!p.hasCards()) {
 				isOver = true;
-				stopBackgroundMusic();//parar de tocar a musica de fundo
+				audioManager.stopBackgroundMusic();//parar de tocar a musica de fundo
 				break;
 			}
 		}
@@ -274,7 +284,7 @@ public class Game implements GameConstants {
 	}
 
 	public int remainingCards() {
-		return cardStack.size();
+		return cardManager.remainingCards();
 	}
 
 	public int[] playedCardsSize() {
@@ -322,18 +332,15 @@ public class Game implements GameConstants {
 			if (p.isMyTurn()) {
 				if (p.getTotalCards() == 2) {
 					p.saysUNO();
-					infoPanel.setError(p.getName() + " said UNO");
+					infoPanel.setError(p.getName() + " disse UNO!");
 				}
 			}
 		}
 	}
 
 	public boolean isPCsTurn(){
-		if(pc.isMyTurn()){
-			return true;
-		}
-		return false;
-	}
+        return pc.isMyTurn();
+    }
 
 	//if it's PC's turn, play it for pc
 	public void playPC(UNOCard topCard) {

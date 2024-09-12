@@ -3,36 +3,28 @@ package View;
 Code created by Josh Braza 
 */
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Point;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.Box;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JLayeredPane;
-import javax.swing.JPanel;
-
+import Components.RoundedJButton;
 import GameModel.Player;
 import Interfaces.GameConstants;
 
-@SuppressWarnings("serial")
-public class PlayerPanel extends JPanel implements GameConstants {
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public final class PlayerPanel extends JPanel implements GameConstants {
 
 	private Player player;
 	private String name;
 
-	private Box myLayout;
-	private JLayeredPane cardHolder;
+	private final Box myLayout;
+	private final JLayeredPane cardHolder;
 	private Box controlPanel;
 
-	private JButton draw;
-	private JButton sayUNO;
+	private RoundedJButton draw;
+	private RoundedJButton sayUNO;
 	private JLabel nameLbl;
-	private MyButtonHandler handler;
+	private final MyButtonHandler handler;
 
 	// Constructor
 	public PlayerPanel(Player newPlayer) {
@@ -44,7 +36,7 @@ public class PlayerPanel extends JPanel implements GameConstants {
 
 		// Set
 		setCards();
-		setControlPanel();
+		setControlPanel(newPlayer);
 
 		myLayout.add(cardHolder);
 		myLayout.add(Box.createHorizontalStrut(40));
@@ -55,10 +47,11 @@ public class PlayerPanel extends JPanel implements GameConstants {
 		handler = new MyButtonHandler();
 		draw.addActionListener(BUTTONLISTENER);
 		draw.addActionListener(handler);
-		
+
 		sayUNO.addActionListener(BUTTONLISTENER);
 		sayUNO.addActionListener(handler);
 		enableButtons();
+
 	}
 
 	@SuppressWarnings("static-access")
@@ -94,28 +87,46 @@ public class PlayerPanel extends JPanel implements GameConstants {
 		this.name = playername;
 	}
 
-	private void setControlPanel() {
-		draw = new JButton("Draw");
-		sayUNO = new JButton("Say UNO");
+	private void setControlPanel(Player newPlayer) {
+		PlayerIcon playerIcon = newPlayer.getPlayerIcon();
+		playerIcon.setIconSize(24, 32);
+		JLabel playerIconLabel = new JLabel(playerIcon);
+		Dimension buttonSize = new Dimension(150, 35);
+
+		draw = new RoundedJButton("Comprar", new Color(79, 129, 189), 20);
+		sayUNO = new RoundedJButton("Dizer UNO!", new Color(149, 55, 53), 20);
 		nameLbl = new JLabel(name);
 
-		// style
-		draw.setBackground(new Color(79, 129, 189));
 		draw.setFont(new Font("Arial", Font.BOLD, 20));
+		draw.setPreferredSize(buttonSize);
 		draw.setFocusable(false);
 
-		sayUNO.setBackground(new Color(149, 55, 53));
 		sayUNO.setFont(new Font("Arial", Font.BOLD, 20));
+		sayUNO.setPreferredSize(buttonSize);
 		sayUNO.setFocusable(false);
 
 		nameLbl.setForeground(Color.WHITE);
 		nameLbl.setFont(new Font("Arial", Font.BOLD, 15));
 
+		JPanel namePanel = new JPanel();
+		namePanel.setLayout(new BoxLayout(namePanel, BoxLayout.X_AXIS));
+		namePanel.setOpaque(false);
+		namePanel.setAlignmentX(LEFT_ALIGNMENT);
+		namePanel.add(playerIconLabel);
+		namePanel.add(Box.createHorizontalStrut(5));
+		namePanel.add(nameLbl);
+
 		controlPanel = Box.createVerticalBox();
-		controlPanel.add(nameLbl);
+		controlPanel.add(namePanel);
 		controlPanel.add(draw);
-		controlPanel.add(Box.createVerticalStrut(15));
+		controlPanel.add(Box.createVerticalStrut(10));
 		controlPanel.add(sayUNO);
+		controlPanel.add(Box.createVerticalStrut(15));
+
+		if (newPlayer.isPC()) {
+			draw.setVisible(false);
+			sayUNO.setVisible(false);
+		}
 	}
 
 	private int calculateOffset(int width, int totalCards) {
@@ -137,21 +148,22 @@ public class PlayerPanel extends JPanel implements GameConstants {
 			return p;
 		}
 	}
-	
+
 	public void enableButtons() {
 		draw.setEnabled(player.isMyTurn());
 		sayUNO.setEnabled(player.isMyTurn());
 	}
-	
-	class MyButtonHandler implements ActionListener{
-		
+
+	class MyButtonHandler implements ActionListener {
+
+		@Override
 		public void actionPerformed(ActionEvent e) {
-			
-			if(player.isMyTurn()){
-				
-				if(e.getSource()==draw)
+
+			if (player.isMyTurn()) {
+
+				if (e.getSource() == draw)
 					BUTTONLISTENER.drawCard();
-				else if(e.getSource()==sayUNO)
+				else if (e.getSource() == sayUNO)
 					BUTTONLISTENER.sayUNO();
 			}
 		}

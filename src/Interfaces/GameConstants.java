@@ -2,11 +2,12 @@ package Interfaces;
 /*
 Code created by Josh Braza 
 */
-import java.awt.Color;
-
 import ServerController.MyButtonListener;
 import ServerController.MyCardListener;
 import View.InfoPanel;
+import View.PlayerIcon;
+
+import java.awt.Color;
 
 
 public interface GameConstants extends UNOConstants_Original {
@@ -14,6 +15,10 @@ public interface GameConstants extends UNOConstants_Original {
 	int FIRSTHAND = 8;
 
 	UNOConstants unoConstants = new UNOConstants();
+
+	StyleSelectionWindow styleSelection = new StyleSelectionWindow();
+	boolean selectedStyle = styleSelection.getSelectedStyle();
+
 	ColorSelectionWindow colorSelection = new ColorSelectionWindow();
 	String selectedPalette = colorSelection.getSelectedPalette();
 
@@ -37,4 +42,10 @@ public interface GameConstants extends UNOConstants_Original {
 	MyButtonListener BUTTONLISTENER = new MyButtonListener();
 
 	InfoPanel infoPanel = new InfoPanel();
+
+	PlayerIcon[] playerIconOptionList = {
+			new PlayerIcon(36, 50, UNO_CARDBACK),
+			new PlayerIcon(36, 50, W_COLORPICKER),
+			new PlayerIcon(36, 50, W_DRAW4PLUS),
+	};
 }
